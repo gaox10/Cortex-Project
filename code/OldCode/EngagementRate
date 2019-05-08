@@ -1,0 +1,3 @@
+#Engagement metric calculation
+normalized_data['engagement_rate'] = ((normalized_data['nComments'] + normalized_data['nLikes']) / normalized_data['nFollowers']) * 100
+normalized_data.head()

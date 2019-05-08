@@ -1,0 +1,100 @@
+#Code used to create Object dataset of post details & image objects
+#Each unique object is a column with the top 'conf' value listed in the row
+import json
+import csv
+
+def main():
+    with open('visit_utah_updated_01_19.json', mode = 'r', encoding = 'utf-8') as f: #Open the data that is in a json file and load it into data
+        data = json.loads(f.read(), encoding = 'utf-8')
+    imageobjects = set()
+    for photo in data: #Get the column names
+        md = photo['metadata'] #The photo's metadata
+        objects = md['imageObjects'] #Objects in the photo found by the API
+        fieldnames = ['PageName', 'PostID', 'PostTime']
+        for object in objects:
+            imageobjects.add(object['name'])
+            
+    ##Code to create Obj dataset that includes one column with list of unique objects in each post
+    with open('Obj.csv', 'w', newline = '') as csvfile:
+        writer = csv.writer(csvfile, delimiter = ',')
+        fieldnames.append('list_object')
+        fieldnames.append('Followers')
+        fieldnames.append('Comments')
+        fieldnames.append('Likes')
+        writer.writerow(fieldnames)
+        for photo in data: #Get the data out with the associated column name
+            photodata = list(['0']*len(fieldnames))
+            md = photo['metadata'] #The photo's metadata
+            objects = md['imageObjects'] #Objects in the photo found by the API
+            for object in objects:
+                objs=set()
+                for key in objects:
+                    objs.add(key['name'])
+            photodata[0] = photo['pageName']
+            photodata[1] = photo['extPostId']
+            photodata[2] = photo['extCreatedAt']
+            photodata[3] = objs
+            photodata[len(photodata)-3] = photo['nFollowers']
+            photodata[len(photodata)-2] = photo['nComments']
+            photodata[len(photodata)-1] = photo['nLikes']
+            writer.writerow(photodata)
+            
+    ##Code to create Object dataset with each unique object as a column with corresponding confidence value in row.
+    with open('Object_data.csv', 'w', newline = '') as csvfile:
+        writer = csv.writer(csvfile, delimiter = ',')
+        length = 6+len(imageobjects)
+        for objects in imageobjects:
+            fieldnames.append(objects)
+        fieldnames.append('Followers')
+        fieldnames.append('Comments')
+        fieldnames.append('Likes')
+        writer.writerow(fieldnames)
+        for photo in data: #Get the data out with the associated column name
+            photodata = list(['0']*length)
+            md = photo['metadata'] #The photo's metadata
+            objects = md['imageObjects'] #Objects in the photo found by the API
+            photodata[0] = photo['pageName']
+            photodata[1] = photo['extPostId']
+            photodata[2] = photo['extCreatedAt']
+            i = 3
+            for object1 in imageobjects:
+                for object2 in objects:
+                    if object1 == object2['name']:
+                        photodata[i] = object2['conf']
+                        break
+                i = i+1
+            photodata[length-3] = photo['nFollowers']
+            photodata[length-2] = photo['nComments']
+            photodata[length-1] = photo['nLikes']
+            writer.writerow(photodata)
+    print('Done')
+
+if __name__ == '__main__':
+    main()
+
+#Import additional packages
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+#Read in new Object csv file
+ds = pd.read_csv('Object_data.csv')
+
+#Generate engagement column based on comments, likes & followers
+ds['Engagement'] = ((ds['Comments'] + ds['Likes']) / ds['Followers']) * 100
+
+#d2= ds.iloc[:,2:10] #used to test following code on smaller subset of data
+
+#Print heatmap of correlation among variables in Object dataset
+plt.figure(figsize=(50,50)) #changes image size, kind of difficult to see all the labels
+sns.heatmap(ds.corr())
+
+#Code to create zoomed in Correlation Matrix
+corr=ds.corr() #generate correlation
+
+cmap = cmap=sns.diverging_palette(5, 250, as_cmap=True)
+
+corr.style.background_gradient(cmap, axis=1)\
+    .set_properties(**{'max-width': '80px', 'font-size': '10pt'})\
+    .set_precision(2)\

@@ -1,0 +1,81 @@
+#Code used to create Color dataset of post details & image objects
+#Each unique object is a column with the top 'conf' value listed in the row
+import json
+import csv
+
+def main():
+    with open('visit_utah_updated_01_19.json', mode = 'r', encoding = 'utf-8') as f: #Open the data that is in a json file and load it into data
+        data = json.loads(f.read(), encoding = 'utf-8')
+    imagecolors = set()
+    for photo in data: #Get the column names
+        md = photo['metadata'] #The photo's metadata
+        colors = md['imageColors'] #Objects in the photo found by the API
+        fieldnames = ['PageName', 'PostID', 'PostTime']
+        for col in colors:
+            imagecolors.add(col['value'])
+    with open('Color_data.csv', 'w', newline = '') as csvfile:
+        writer = csv.writer(csvfile, delimiter = ',')
+        length = 6+len(imagecolors)
+        for cols in imagecolors:
+            fieldnames.append(cols)
+        fieldnames.append('Followers')
+        fieldnames.append('Comments')
+        fieldnames.append('Likes')
+        writer.writerow(fieldnames)
+        for photo in data: #Get the data out with the associated column name
+            photodata = list(['0']*length)
+            md = photo['metadata'] #The photo's metadata
+            colors = md['imageColors'] #Objects in the photo found by the API
+            photodata[0] = photo['pageName']
+            photodata[1] = photo['extPostId']
+            photodata[2] = photo['extCreatedAt']
+            i = 3
+            for col1 in imagecolors:
+                for col2 in colors:
+                    if col1 == col2['value']:
+                        photodata[i] = col2['confidence']
+                        break
+                i = i+1
+            photodata[length-3] = photo['nFollowers']
+            photodata[length-2] = photo['nComments']
+            photodata[length-1] = photo['nLikes']
+            writer.writerow(photodata)
+    print('Done')
+
+if __name__ == '__main__':
+    main()
+
+#Import additional packages
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+ds = pd.read_csv('Color_data.csv')
+ds.head()
+ds.columns = map(str.upper, ds.columns)
+list(ds)
+ds['ENGAGEMENT'] = ((ds['COMMENTS'] + ds['LIKES']) / ds['FOLLOWERS']) * 100
+reader = csv.reader(open('out.csv'))
+d={}
+for row in reader:
+    d[row[0]]=row[1:]
+print(d)
+
+list2 = []
+list2.extend(["PAGENAME", "POSTID","POSTTIME"])
+for item in ds.columns:
+    if item in d:
+        list2.append(d[item][0])
+list2.extend(["FOLLOWERS", "COMMENTS","LIKES","ENGAGEMENT"])
+print(list2)
+# print(len(ds.columns))
+# print(len(list2))
+# print(len(d))
+ds.columns = list2
+
+plt.figure(figsize=(50,50)) #changes image size, kind of difficult to see all the labels
+plt.rcParams.update({'font.size':22})
+sns.heatmap(ds.corr())
+
+
