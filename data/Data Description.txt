@@ -1,0 +1,16 @@
+Column Label BreakDown
+0 - PageName
+1 - PostID
+2 - Readability
+3 - Post Time
+4 - Height
+5 - Width
+6 - PHash
+7-500 - ImageTags
+501-950 - HashTags
+951-1062 - ImageObjects
+1063-1133 - ImageColors
+1134-3307 - KeyWords
+3308 - Followers
+3309 - Comments
+3310 - Likes 
